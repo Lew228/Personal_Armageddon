@@ -18,15 +18,15 @@ resource "aws_launch_template" "shinjuku_lt" {
 
   tag_specifications {
     resource_type = "instance"
-    tags = { Name = "shinjuku-medical-node" }
+    tags          = { Name = "shinjuku-medical-node" }
   }
 }
 
 # 2. Tokyo-Specific ASG
 resource "aws_autoscaling_group" "shinjuku_asg" {
-  desired_capacity    = 2
-  max_size            = 4
-  min_size            = 1
+  desired_capacity = 2
+  max_size         = 4
+  min_size         = 1
   # Pointing to Tokyo Subnets
   vpc_zone_identifier = [aws_subnet.chewbacca_private_subnet01.id, aws_subnet.chewbacca_private_subnet02.id]
 

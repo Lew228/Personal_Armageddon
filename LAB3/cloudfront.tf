@@ -18,7 +18,7 @@ resource "aws_cloudfront_distribution" "medical_global_dist" {
     custom_origin_config {
       http_port              = 80
       https_port             = 443
-      origin_protocol_policy = "http-only" 
+      origin_protocol_policy = "http-only"
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
@@ -54,22 +54,22 @@ resource "aws_cloudfront_distribution" "medical_global_dist" {
     path_pattern     = "/records/*"
     target_origin_id = "medical-failover-group"
 
-    allowed_methods  = ["GET", "HEAD", "OPTIONS"]
-    cached_methods   = ["GET", "HEAD"]
+    allowed_methods = ["GET", "HEAD", "OPTIONS"]
+    cached_methods  = ["GET", "HEAD"]
 
     # Managed-CachingDisabled
-    cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
+    cache_policy_id = data.aws_cloudfront_cache_policy.caching_disabled.id
     # Managed-AllViewer (Forwards all headers so the app knows it's Brazil vs Tokyo)
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id 
-    
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+
     viewer_protocol_policy = "redirect-to-https"
   }
-    ordered_cache_behavior {
+  ordered_cache_behavior {
     path_pattern     = "/records/save/*"
-    target_origin_id = "shinjuku-origin" 
+    target_origin_id = "shinjuku-origin"
 
-    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
-    cached_methods   = ["GET", "HEAD"]
+    allowed_methods = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods  = ["GET", "HEAD"]
 
     cache_policy_id          = data.aws_cloudfront_cache_policy.caching_disabled.id
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
@@ -80,20 +80,20 @@ resource "aws_cloudfront_distribution" "medical_global_dist" {
     target_origin_id = "shinjuku-origin"
     allowed_methods  = ["GET", "HEAD"]
     cached_methods   = ["GET", "HEAD"]
-    
+
     # Managed-CachingOptimized
     cache_policy_id = data.aws_cloudfront_cache_policy.caching_optimized.id
 
     viewer_protocol_policy = "redirect-to-https"
   }
 
-  restrictions { 
-    geo_restriction { 
-        restriction_type = "none" 
-        } 
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
     }
-  viewer_certificate { 
-   cloudfront_default_certificate = true
+  }
+  viewer_certificate {
+    cloudfront_default_certificate = true
     minimum_protocol_version       = "TLSv1.2_2021"
-    }
+  }
 }
