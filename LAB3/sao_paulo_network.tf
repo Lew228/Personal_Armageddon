@@ -12,6 +12,7 @@ resource "aws_subnet" "liberdade_private_subnet01" {
   cidr_block        = "10.102.1.0/24"
   availability_zone = "sa-east-1a"
   tags              = { Name = "liberdade-private-1a" }
+  map_public_ip_on_launch = false
 }
 
 resource "aws_subnet" "liberdade_private_subnet02" {
@@ -20,6 +21,7 @@ resource "aws_subnet" "liberdade_private_subnet02" {
   cidr_block        = "10.102.2.0/24"
   availability_zone = "sa-east-1c"
   tags              = { Name = "liberdade-private-1c" }
+  map_public_ip_on_launch = false
 }
 
 
@@ -43,6 +45,7 @@ resource "aws_security_group" "liberdade_ec2_sg" {
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"] # In Lab 3, CloudFront/ALB hits this
+    security_groups = [aws_security_group.liberdade_alb_sg.id]
   }
 
   egress {
@@ -134,4 +137,28 @@ resource "aws_internet_gateway" "liberdade_gateway" {
   provider = aws.saopaulo
   vpc_id   = aws_vpc.liberdade_vpc01.id
   tags     = { Name = "liberdade-gateway" }
+}
+
+# 1. Security Group for the endpoints
+resource "aws_security_group" "ssm_endpoint_sg" {
+  provider = aws.saopaulo
+  vpc_id   = aws_vpc.liberdade_vpc01.id
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.102.0.0/16"]
+  }
+}
+
+# 2. The Trio of Endpoints
+resource "aws_vpc_endpoint" "ssm_service" {
+  for_each            = toset(["ssm", "ssmmessages", "ec2messages"])
+  provider            = aws.saopaulo
+  vpc_id              = aws_vpc.liberdade_vpc01.id
+  service_name        = "com.amazonaws.sa-east-1.${each.value}"
+  vpc_endpoint_type   = "Interface"
+  private_dns_enabled = true
+  subnet_ids          = [aws_subnet.liberdade_private_subnet01.id, aws_subnet.liberdade_private_subnet02.id]
+  security_group_ids  = [aws_security_group.ssm_endpoint_sg.id]
 }

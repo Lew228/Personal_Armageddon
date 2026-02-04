@@ -14,7 +14,7 @@ resource "aws_security_group" "chewbacca_rds_sg01" {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["10.10.0.0/16", "10.102.0.0/16"] #added 10.102.0.0/16 for Sao Paulo CLI verification
+    cidr_blocks = ["10.10.0.0/16"] #added 10.102.0.0/16 for Sao Paulo CLI verification
   }
 
   # Rule 2: Allow Sao Paulo App Tier (Liberdade) via TGW
