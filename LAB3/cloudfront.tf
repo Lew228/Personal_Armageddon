@@ -1,3 +1,4 @@
+
 data "aws_cloudfront_cache_policy" "caching_disabled" {
   name = "Managed-CachingDisabled"
 }
@@ -12,9 +13,50 @@ data "aws_cloudfront_origin_request_policy" "all_viewer" {
 
 resource "aws_cloudfront_distribution" "medical_global_dist" {
   # Tokyo Origin (Hub)
+##############################Brimah Made changes here##############################
+  web_acl_id = aws_wafv2_web_acl.medical_global_waf.arn
+    
+/*Changes here 
+domaain_name = aws_lb.shinjuku_alb.dns_name
+This uses *.elb.amazonaws.com 
+But our ALB certificate is (or should be):
+shinjuku-origin.example.com CloudFront validates the cert against the hostname it connects to.
+These must match or the handshake fails.
+*/
+origin {
+  domain_name = "shinjuku-origin.lewsdomain.com" 
+  origin_id   = "shinjuku-origin"
+  custom_header { #added for lab 3b. Tells CF to give a secret header to the ALBs
+      name  = "X-Medical-Vault-Secret"
+      value = "VaultSecret2026!-Compliance" # In production, use Secrets Manager
+    }
+    custom_origin_config {
+      http_port              = 80
+      https_port             = 443
+      origin_protocol_policy = "https-only" #Changes here 
+      origin_ssl_protocols   = ["TLSv1.2"]
+    }
+  }
+#####################################################################################
+  # São Paulo Origin (Spoke)
+
+##############################Brimah Made changes here###############################
+
+
+/*Changes here 
+domain_name = "liberdade-origin.example.com"
+This uses *.elb.amazonaws.com 
+But our ALB certificate is (or should be):
+shinjuku-origin.example.com CloudFront validates the cert against the hostname it connects to.
+These must match or the handshake fails.
+*/
   origin {
-    domain_name = aws_lb.shinjuku_alb.dns_name
-    origin_id   = "shinjuku-origin"
+    domain_name = "liberdade-origin.lewsdomain.com"
+    origin_id   = "liberdade-origin"
+    custom_header { #added for lab 3b. Tells CF to give a secret header to the ALBs
+      name  = "X-Medical-Vault-Secret"
+      value = "VaultSecret2026!-Compliance" # In production, use Secrets Manager
+    }
     custom_origin_config {
       http_port              = 80
       https_port             = 443
@@ -22,17 +64,11 @@ resource "aws_cloudfront_distribution" "medical_global_dist" {
       origin_ssl_protocols   = ["TLSv1.2"]
     }
   }
-
-  # São Paulo Origin (Spoke)
-  origin {
-    domain_name = aws_lb.liberdade_alb.dns_name
-    origin_id   = "liberdade-origin"
-    custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
-      origin_ssl_protocols   = ["TLSv1.2"]
-    }
+  #####################################################################################
+logging_config { #added for lab 3b
+    include_cookies = false
+    bucket          = aws_s3_bucket.audit_log_vault.bucket_domain_name
+    prefix          = "Chwebacca-logs/"
   }
 
   enabled             = true

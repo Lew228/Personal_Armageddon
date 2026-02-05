@@ -8,43 +8,48 @@ resource "aws_launch_template" "shinjuku_lt" {
 
   vpc_security_group_ids = [aws_security_group.shinjuku_ec2_sg.id]
 
-  user_data = base64encode(<<-EOF
+ user_data = base64encode(<<-EOF
               #!/bin/bash
-              # 1. Wait for Ubuntu's background updates to finish
-              while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
-                echo "Waiting for other package managers..."
-                sleep 5
-              done
-
-              # 2. Use a specific user-friendly install command
-              export DEBIAN_FRONTEND=noninteractive
-              apt-get update -y
-              apt-get install -y python3-pip python3-flask python3-pymysql
-
-              # 3. Create the app as root (to avoid permission issues)
               cat << 'APP' > /root/app.py
-from flask import Flask, jsonify
-import os
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+import socket
 
-app = Flask(__name__)
+class MedicalVaultHandler(BaseHTTPRequestHandler):
+    def check_rds(self):
+        # REPLACE with your actual RDS Endpoint from Terraform
+        rds_endpoint = "${aws_db_instance.shinjuku_medical_db.address}" 
+        port = 3306
+        try:
+            # Attempt a socket connection with a 2-second timeout
+            with socket.create_connection((rds_endpoint, port), timeout=2):
+                return "CONNECTED"
+        except Exception as e:
+            return f"FAILED: {str(e)}"
 
-@app.route('/records/save/', methods=['POST', 'GET'])
-def save_record():
-    return jsonify({
-        "status": "Success", 
-        "region": "Sao Paulo", 
-        "node": "Ubuntu-Private-Vault"
-    }), 200
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        
+        # Check RDS status
+        db_status = self.check_rds()
+        
+        response = {
+            "status": "Success", 
+            "region": "Tokyo-Hub", 
+            "database_connectivity": db_status,
+            "note": "Verified via TGW to Tokyo RDS"
+        }
+        self.wfile.write(json.dumps(response).encode())
 
-if __name__ == '__main__':
-    # Listen on all IPs on Port 80
-    app.run(host='0.0.0.0', port=80)
+server = HTTPServer(('0.0.0.0', 80), MedicalVaultHandler)
+server.serve_forever()
 APP
 
-              # 4. Start it explicitly with sudo/root
-              sudo python3 /root/app.py > /root/app.log 2>&1 &
+              nohup python3 /root/app.py > /root/app.log 2>&1 &
               EOF
-  )
+)
 
   tag_specifications {
     resource_type = "instance"
@@ -59,7 +64,8 @@ resource "aws_autoscaling_group" "shinjuku_asg" {
   min_size         = 1
   # Pointing to Tokyo Subnets
   vpc_zone_identifier = [aws_subnet.chewbacca_private_subnet01.id, aws_subnet.chewbacca_private_subnet02.id]
-
+  target_group_arns   = [aws_lb_target_group.shinjuku_tg.arn]
+  health_check_type   = "ELB"
   launch_template {
     id      = aws_launch_template.shinjuku_lt.id
     version = "$Latest"

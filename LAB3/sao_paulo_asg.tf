@@ -4,7 +4,8 @@ resource "aws_autoscaling_group" "liberdade_asg" {
   max_size         = 4
   min_size         = 1
   vpc_zone_identifier = [aws_subnet.liberdade_private_subnet01.id, aws_subnet.liberdade_private_subnet02.id]
-  
+  target_group_arns   = [aws_lb_target_group.liberdade_tg.arn]
+  health_check_type   = "ELB"
 
 
   launch_template {
@@ -32,12 +33,45 @@ resource "aws_launch_template" "liberdade_lt" {
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
-              # Injecting the Tokyo RDS Address
-              echo "DB_ENDPOINT=${aws_db_instance.shinjuku_medical_db.address}" >> /etc/environment
-              echo "DB_NAME=medical_records" >> /etc/environment
-              # ... additional app setup commands ...
+              # 1. Create the app using ONLY built-in Python libraries
+              # This bypasses the need for an internet connection/NAT Gateway
+              cat << 'APP' > /root/app.py
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import json
+
+class MedicalVaultHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        # This proves the node is up even without Flask installed
+        response = {"status": "Success", "region": "Sao-Paulo-Spoke", "mode": "Secondary-Vault"}
+        self.wfile.write(json.dumps(response).encode())
+
+    def do_POST(self):
+        # This mimics the /records/save/ behavior for your Lab
+        self.send_response(201)
+        self.send_header('Content-type', 'application/json')
+        self.end_headers()
+        response = {"status": "Record Saved", "vault": "Liberdade-01"}
+        self.wfile.write(json.dumps(response).encode())
+
+# Start the server on Port 80
+def run():
+    server_address = ('0.0.0.0', 80)
+    httpd = HTTPServer(server_address, MedicalVaultHandler)
+    print("Private Vault API running on port 80...")
+    httpd.serve_forever()
+
+if __name__ == '__main__':
+    run()
+APP
+
+              # 2. Start the app as root in the background
+              # Using the built-in python3 (which comes with Ubuntu 22.04)
+              nohup python3 /root/app.py > /root/app.log 2>&1 &
               EOF
-  )
+)
 
   tag_specifications {
     resource_type = "instance"

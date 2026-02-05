@@ -17,6 +17,8 @@ resource "aws_ec2_transit_gateway_route" "liberdade_to_tokyo_tgw_static" {
   destination_cidr_block        = "10.101.0.0/16"
   transit_gateway_attachment_id = aws_ec2_transit_gateway_peering_attachment.shinjuku_to_liberdade_peer01.id
   transit_gateway_route_table_id = aws_ec2_transit_gateway.liberdade_tgw01.propagation_default_route_table_id
+
+  depends_on = [aws_ec2_transit_gateway_peering_attachment_accepter.liberdade_accept_peer01]
 }
 
 # Explanation: Liberdade attaches to its VPC—compute can now reach Tokyo legally, through the controlled corridor.
