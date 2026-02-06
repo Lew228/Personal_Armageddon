@@ -7,7 +7,7 @@
       "EventTime": "2026-02-05 20:57:07-07:00",
       "User": "AWS Service/System",
       "Resources": [
-        "ASIAZBC2MAJROFWPWXNY",
+        "ASIAZ***************",
         "AROAZBC2MAJREKN4OS4HU:AutoScaling",
         "arn:aws:sts::620812304994:assumed-role/AWSServiceRoleForAutoScaling/AutoScaling",
         "AutoScaling",
@@ -34,7 +34,7 @@
       "EventTime": "2026-02-05 20:57:06-07:00",
       "User": "AWS Service/System",
       "Resources": [
-        "ASIAZBC2MAJRBIBCRE7Q",
+        "ASIAZ***************",
         "AROAZBC2MAJREKN4OS4HU:AutoScaling",
         "arn:aws:sts::620812304994:assumed-role/AWSServiceRoleForAutoScaling/AutoScaling",
         "AutoScaling",
